@@ -1,0 +1,31 @@
+# FILE: backend/render.yaml
+# Deploy backend only — database is on Neon (free forever)
+# No PostgreSQL service here — add DATABASE_URL env var manually from Neon
+services:
+  - type: web
+    name: smartsalon-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      # Add these manually in Render dashboard:
+      # DATABASE_URL      = your Neon connection string
+      # JWT_SECRET        = 32+ char random string
+      # JWT_EXPIRES_IN    = 7d
+      # SMTP_HOST         = smtp.gmail.com
+      # SMTP_PORT         = 587
+      # SMTP_USER         = your Gmail
+      # SMTP_PASS         = Gmail App Password
+      # OWNER_EMAIL       = salon owner email
+      # ADMIN_EMAIL       = admin@smartsalon.in
+      # ADMIN_PASSWORD    = strong password
+      # FRONTEND_URL      = https://your-app.vercel.app
+      # BACKEND_URL       = https://your-api.onrender.com
+      # RAZORPAY_KEY_ID   = rzp_live_xxx (optional)
+      # RAZORPAY_KEY_SECRET = xxx (optional)

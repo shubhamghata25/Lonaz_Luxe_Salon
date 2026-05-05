@@ -1,0 +1,58 @@
+/**
+ * Extra security middleware
+ */
+
+// Block suspicious User-Agents (bots, scanners)
+const blockSuspiciousAgents = (req, res, next) => {
+  const ua = (req.headers["user-agent"] || "").toLowerCase();
+  const blocked = ["sqlmap", "nikto", "nmap", "masscan", "zgrab", "dirbuster", "python-requests/2.18"];
+  if (blocked.some(b => ua.includes(b))) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  next();
+};
+
+// Prevent parameter pollution
+const preventParamPollution = (req, res, next) => {
+  // Convert arrays to last value for query params
+  if (req.query) {
+    for (const key of Object.keys(req.query)) {
+      if (Array.isArray(req.query[key])) {
+        req.query[key] = req.query[key][req.query[key].length - 1];
+      }
+    }
+  }
+  next();
+};
+
+// Sanitize request body — strip keys starting with $ (NoSQL injection prevention)
+const sanitizeBody = (req, res, next) => {
+  if (req.body && typeof req.body === "object" && !(req.body instanceof Buffer)) {
+    const sanitize = (obj, depth = 0) => {
+      if (depth > 5) return; // prevent deep recursion
+      for (const key of Object.keys(obj)) {
+        if (key.startsWith("$")) {
+          delete obj[key];
+        } else if (obj[key] && typeof obj[key] === "object" && !Array.isArray(obj[key])) {
+          sanitize(obj[key], depth + 1);
+        }
+      }
+    };
+    sanitize(req.body);
+  }
+  next();
+};
+
+// Log suspicious activity — only log, never block legitimate traffic
+const logSuspicious = (req, res, next) => {
+  try {
+    const suspicious = ["<script", "javascript:", "onclick=", "onerror=", "etc/passwd", "cmd.exe"];
+    const payload = JSON.stringify({ ...req.query, ...req.body }).toLowerCase();
+    if (suspicious.some(s => payload.includes(s))) {
+      console.warn(`⚠️  Suspicious request: ${req.method} ${req.path} from ${req.ip}`);
+    }
+  } catch {}
+  next(); // Never block — just log
+};
+
+module.exports = { blockSuspiciousAgents, preventParamPollution, sanitizeBody, logSuspicious };
